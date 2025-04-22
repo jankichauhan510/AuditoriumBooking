@@ -23,16 +23,21 @@ function BookingRow({ index, booking, refetch }) {
   };
 
   const formatDateTime = (isoString) => {
-    if (!isoString) return "N/A";
+    if (!isoString) return "N/A"; // Handle empty values
+
     const date = new Date(isoString);
-    return date.toLocaleString("en-GB", {
-      day: "2-digit",
-      month: "long",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true,
-    });
+
+    // Extract UTC parts manually
+    const day = date.getUTCDate();
+    const month = date.toLocaleString("en-GB", { month: "long", timeZone: "UTC" });
+    const year = date.getUTCFullYear();
+
+    let hours = date.getUTCHours();
+    const minutes = date.getUTCMinutes().toString().padStart(2, "0");
+    const ampm = hours >= 12 ? "PM" : "AM";
+    hours = hours % 12 || 12; // Convert 24-hour to 12-hour format
+
+    return `${day} ${month} ${year} at ${hours}:${minutes} ${ampm}`;
   };
 
   const handleAction = async () => {
