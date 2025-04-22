@@ -80,13 +80,13 @@ function BookingRequests() {
       {showConflictModal && (
         <div className="fixed inset-0 flex justify-center items-center bg-gray-500 bg-opacity-50 z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg w-1/2">
-            <button
-              onClick={closeConflictModal}
+            {/* <button
+              onClick={closeConflictModal} // Close the modal when clicked
               className="absolute top-0 right-0 p-2 text-red-500"
             >
               X
-            </button>
-            <CheckConflictBookingModal />
+            </button> */}
+            <CheckConflictBookingModal closeModal={closeConflictModal} />
           </div>
         </div>
       )}

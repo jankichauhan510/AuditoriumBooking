@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 
-function CheckConflictBookings() {
+function CheckConflictBookings({ closeModal }) {
   const [auditoriums, setAuditoriums] = useState([]);
   const [selectedAuditorium, setSelectedAuditorium] = useState("");
   const [conflicts, setConflicts] = useState([]);
@@ -32,7 +32,15 @@ function CheckConflictBookings() {
   };
 
   return (
-    <div className="p-6 w-full max-w-2xl">
+    <div className="p-6 w-full max-w-2xl relative">
+      {/* Close Button */}
+      <button
+        onClick={closeModal} // Close the modal when clicked
+        className="absolute top-2 right-2 text-2xl text-red-600"
+      >
+        &times;
+      </button>
+
       <h2 className="text-xl font-semibold mb-4">Check Conflict Bookings</h2>
 
       <label className="block mb-2 text-sm font-medium">Select Auditorium:</label>
