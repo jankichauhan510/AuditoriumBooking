@@ -1,9 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { useModal } from "../components/ModalContext";
 
 function CheckConflictBookings() {
-  const { hideModal } = useModal();
   const [auditoriums, setAuditoriums] = useState([]);
   const [selectedAuditorium, setSelectedAuditorium] = useState("");
   const [conflicts, setConflicts] = useState([]);
@@ -24,7 +22,9 @@ function CheckConflictBookings() {
   const handleCheckConflicts = async () => {
     if (!selectedAuditorium) return;
     try {
-      const res = await axios.get(`http://localhost:5001/check-only-conflicts/${selectedAuditorium}`);
+      const res = await axios.get(
+        `http://localhost:5001/check-only-conflicts/${selectedAuditorium}`
+      );
       setConflicts(res.data.conflicts || []);
     } catch (error) {
       console.error("❌ Error checking conflicts:", error);
@@ -61,10 +61,24 @@ function CheckConflictBookings() {
           <h3 className="font-semibold text-lg mb-2">Conflicting Bookings:</h3>
           <ul className="list-disc list-inside text-sm">
             {conflicts.map((conflict) => (
-              <li key={conflict.id}>
-                <strong>{conflict.event_name}</strong> on{" "}
-                {conflict.dates.map(d => `${d.date} (${d.time_slots.join(", ")})`).join(", ")} by{" "}
-                {conflict.user_name} ({conflict.user_email})
+              <li
+                key={conflict.id}
+                className="border-b pb-3 mb-3"
+                style={{ color: "red" }} // Adding red color for emphasis
+              >
+                <div className="font-bold text-lg">{conflict.event_name}</div>
+                <div>
+                  <strong>Date:</strong>{" "}
+                  {conflict.dates
+                    .map(
+                      (d) => `${d.date} (${d.time_slots.join(", ")})`
+                    )
+                    .join(", ")}
+                </div>
+                <div>
+                  <strong>Booked by:</strong> {conflict.user_name} (
+                  {conflict.user_email})
+                </div>
               </li>
             ))}
           </ul>
@@ -74,13 +88,6 @@ function CheckConflictBookings() {
       {conflicts.length === 0 && selectedAuditorium && (
         <p className="mt-4 text-green-600 font-medium">✅ No conflicts found.</p>
       )}
-
-      <button
-        onClick={hideModal}
-        className="mt-6 bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
-      >
-        Close
-      </button>
     </div>
   );
 }
