@@ -1,13 +1,12 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import BookingRow from "../admin/BookingRow";
-import { useModal } from "../components/ModalContext";
 import CheckConflictBookingModal from "../admin/CheckConflictBookings";
 
 function BookingRequests() {
-  const { showModal } = useModal();
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showConflictModal, setShowConflictModal] = useState(false); // State to control the modal visibility
 
   useEffect(() => {
     fetchBookings();
@@ -25,7 +24,11 @@ function BookingRequests() {
   };
 
   const openConflictModal = () => {
-    showModal(<CheckConflictBookingModal />);
+    setShowConflictModal(true); // Show the conflict modal
+  };
+
+  const closeConflictModal = () => {
+    setShowConflictModal(false); // Close the conflict modal
   };
 
   if (loading) return <p className="text-center mt-5">Loading bookings...</p>;
@@ -70,6 +73,21 @@ function BookingRequests() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Conditionally render the conflict booking modal */}
+      {showConflictModal && (
+        <div className="fixed inset-0 flex justify-center items-center bg-gray-500 bg-opacity-50 z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-1/2">
+            <button
+              onClick={closeConflictModal}
+              className="absolute top-0 right-0 p-2 text-red-500"
+            >
+              X
+            </button>
+            <CheckConflictBookingModal />
+          </div>
         </div>
       )}
     </div>
