@@ -2,6 +2,8 @@ import sql from 'mssql';
 import express from 'express';
 import cors from 'cors';
 import nodemailer from "nodemailer";
+import axios from 'axios';
+import moment from 'moment';
 
 const router = express.Router();
 const app = express();
@@ -116,9 +118,27 @@ app.put("/api/feedback/update/:id", async (req, res) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
+ 
+// ✅ Get all bookings using the stored procedure on admin side
+app.get('/get-all-bookings', async (req, res) => {
+  try {
+    const pool = await poolPromise;
 
+    const result = await pool.request().execute('GetAllBookings');
 
-//get auditorium time slot for booked like in Pending,approved,confirm
+    const bookings = result.recordset.map(booking => ({
+      ...booking,
+      dates: JSON.parse(booking.dates) // Convert stored JSON dates back to array
+    }));
+
+    res.status(200).json(bookings);
+  } catch (err) {
+    console.error("❌ Error fetching bookings:", err);
+    res.status(500).json({ message: "Internal Server Error", error: err.message });
+  }
+});
+
+//get auditorium time slot for booked like in approved,confirm
 app.get("/booked-slots/:auditoriumId", async (req, res) => {
   try {
     const { auditoriumId } = req.params;
@@ -179,6 +199,74 @@ app.get("/booked-slots/:auditoriumId", async (req, res) => {
   }
 });
 
+//check conflict booking
+app.get('/check-only-conflicts/:auditoriumId', async (req, res) => {
+  try {
+      const { auditoriumId } = req.params;
+
+      // 1. Fetch all pending bookings
+      const pendingRes = await axios.get('http://localhost:5001/get-all-bookings');
+      const pendingBookings = pendingRes.data;
+
+      // 2. Fetch booked slots (approved/confirmed)
+      const bookedRes = await axios.get(`http://localhost:5001/booked-slots/${auditoriumId}`);
+      const bookedSlotsMap = bookedRes.data;
+
+      const parseSlot = (slot) => {
+          const [start, end] = slot.split('-').map(t => moment(t.trim(), 'HH:mm'));
+          return { start, end };
+      };
+
+      const slotsOverlap = (slot1, slot2) => {
+          const a = parseSlot(slot1);
+          const b = parseSlot(slot2);
+          return a.start.isBefore(b.end) && b.start.isBefore(a.end);
+      };
+
+      const conflicts = [];
+
+      // Checking conflicts for each pending booking
+      for (const booking of pendingBookings) {
+          const { id, dates } = booking;
+
+          let hasConflict = false;
+
+          // Loop through the dates and requested time slots
+          for (const { date, time_slots } of dates) {
+              const approvedSlots = bookedSlotsMap[date] || [];
+
+              // Check for overlap between requested slots and approved booked slots
+              for (const slot of time_slots) {
+                  for (const approvedSlot of approvedSlots) {
+                      if (slotsOverlap(slot, approvedSlot)) {
+                          hasConflict = true;
+                          break;
+                      }
+                  }
+                  if (hasConflict) break;
+              }
+
+              if (hasConflict) break;
+          }
+
+          if (hasConflict) {
+              conflicts.push(booking);
+          }
+      }
+
+      res.json({
+          message: `✅ Conflict check completed.`,
+          totalPending: pendingBookings.length,
+          totalConflicts: conflicts.length,
+          conflicts
+      });
+
+  } catch (error) {
+      console.error("❌ Error checking conflicts:", error.message);
+      res.status(500).json({ error: "Something went wrong during conflict check." });
+  }
+});
+
 // Route for booking the auditorium
 app.post('/book-auditorium', async (req, res) => {
   try {
@@ -208,25 +296,6 @@ app.post('/book-auditorium', async (req, res) => {
   } catch (err) {
     console.error("❌ Error inserting booking:", err); // Debugging Step 2
     res.status(500).json({ message: 'Internal Server Error', error: err.message });
-  }
-});
-
-// ✅ Get all bookings using the stored procedure
-app.get('/get-all-bookings', async (req, res) => {
-  try {
-    const pool = await poolPromise;
-
-    const result = await pool.request().execute('GetAllBookings');
-
-    const bookings = result.recordset.map(booking => ({
-      ...booking,
-      dates: JSON.parse(booking.dates) // Convert stored JSON dates back to array
-    }));
-
-    res.status(200).json(bookings);
-  } catch (err) {
-    console.error("❌ Error fetching bookings:", err);
-    res.status(500).json({ message: "Internal Server Error", error: err.message });
   }
 });
 
