@@ -1,97 +1,88 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import axios from "axios";
-import BookingDateDisplay from "../admin/BookingDateDisplay";
 import { useModal } from "../components/ModalContext";
 
-function CheckConflictBookings({ booking, refetch }) {
-    const [conflicts, setConflicts] = useState([]);
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const { showModal } = useModal();
+function CheckConflictBookings() {
+  const { hideModal } = useModal();
+  const [auditoriums, setAuditoriums] = useState([]);
+  const [selectedAuditorium, setSelectedAuditorium] = useState("");
+  const [conflicts, setConflicts] = useState([]);
 
-    const checkConflicts = async () => {
-        try {
-            // Ensure 'booking' is being passed correctly
-            if (!booking) {
-                showModal("No booking data available", "error");
-                return;
-            }
+  useEffect(() => {
+    fetchAuditoriums();
+  }, []);
 
-            const auditoriumId = booking.auditorium_id;
+  const fetchAuditoriums = async () => {
+    try {
+      const res = await axios.get("http://localhost:5001/auditoriums");
+      setAuditoriums(res.data);
+    } catch (err) {
+      console.error("❌ Error fetching auditoriums:", err);
+    }
+  };
 
-            // Call the '/check-only-conflicts/:auditoriumId' route on your backend
-            const res = await axios.get(`http://localhost:5001/check-only-conflicts/${auditoriumId}`);
+  const handleCheckConflicts = async () => {
+    if (!selectedAuditorium) return;
+    try {
+      const res = await axios.get(`http://localhost:5001/check-only-conflicts/${selectedAuditorium}`);
+      setConflicts(res.data.conflicts || []);
+    } catch (error) {
+      console.error("❌ Error checking conflicts:", error);
+    }
+  };
 
-            const { totalConflicts, conflicts } = res.data;
+  return (
+    <div className="p-6 w-full max-w-2xl">
+      <h2 className="text-xl font-semibold mb-4">Check Conflict Bookings</h2>
 
-            if (totalConflicts > 0) {
-                const conflictIds = conflicts.map(conflict => conflict.id);
-                showModal(`Conflicts detected for booking(s): ${conflictIds.join(', ')}`, "error");
-                setIsProcessing(false);
-                return;
-            }
+      <label className="block mb-2 text-sm font-medium">Select Auditorium:</label>
+      <select
+        className="border p-2 mb-4 w-full"
+        value={selectedAuditorium}
+        onChange={(e) => setSelectedAuditorium(e.target.value)}
+      >
+        <option value="">-- Select --</option>
+        {auditoriums.map((a) => (
+          <option key={a.id} value={a.id}>
+            {a.name}
+          </option>
+        ))}
+      </select>
 
-            showModal("No conflicts detected! Proceeding with booking.", "success");
-        }
-        catch (error) {
-            console.error(error);
-            showModal("Error checking conflicts", "error");
-        }
-    };
+      <button
+        onClick={handleCheckConflicts}
+        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+      >
+        Check Conflict
+      </button>
 
-    return (
-        <>
-            <div className="flex justify-end mb-4">
-                <button
-                    onClick={checkConflicts}
-                    className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700"
-                >
-                    Check Conflict Bookings
-                </button>
-            </div>
+      {conflicts.length > 0 && (
+        <div className="mt-6">
+          <h3 className="font-semibold text-lg mb-2">Conflicting Bookings:</h3>
+          <ul className="list-disc list-inside text-sm">
+            {conflicts.map((conflict) => (
+              <li key={conflict.id}>
+                <strong>{conflict.event_name}</strong> on{" "}
+                {conflict.dates.map(d => `${d.date} (${d.time_slots.join(", ")})`).join(", ")} by{" "}
+                {conflict.user_name} ({conflict.user_email})
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
-            {isModalOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                    <div className="bg-white p-6 rounded shadow-lg max-w-2xl w-full overflow-y-auto max-h-[90vh]">
-                        <h2 className="text-lg font-bold mb-4">Conflict Bookings</h2>
-                        <table className="w-full table-auto border">
-                            <thead>
-                                <tr className="bg-gray-100">
-                                    <th className="p-2 border">User</th>
-                                    <th className="p-2 border">Auditorium</th>
-                                    <th className="p-2 border">Event</th>
-                                    <th className="p-2 border">Dates</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {conflicts.map((booking, idx) => (
-                                    <tr key={idx} className="text-center">
-                                        <td className="border p-2">
-                                            {booking.user_name}
-                                            <br />
-                                            <span className="text-xs text-gray-500">{booking.user_email}</span>
-                                        </td>
-                                        <td className="border p-2">{booking.auditorium_name}</td>
-                                        <td className="border p-2">{booking.event_name}</td>
-                                        <td className="border p-2">
-                                            <BookingDateDisplay dates={booking.dates} />
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                        <div className="mt-4 text-right">
-                            <button
-                                onClick={() => setIsModalOpen(false)}
-                                className="bg-gray-600 text-white px-4 py-1 rounded hover:bg-gray-700"
-                            >
-                                Close
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-        </>
-    );
+      {conflicts.length === 0 && selectedAuditorium && (
+        <p className="mt-4 text-green-600 font-medium">✅ No conflicts found.</p>
+      )}
+
+      <button
+        onClick={hideModal}
+        className="mt-6 bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+      >
+        Close
+      </button>
+    </div>
+  );
 }
 
 export default CheckConflictBookings;

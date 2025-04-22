@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import BookingRow from "../admin/BookingRow";
 import { useModal } from "../components/ModalContext";
+import CheckConflictBookingModal from "../admin/CheckConflictBookings";
 
 function BookingRequests() {
   const { showModal } = useModal();
@@ -23,11 +24,24 @@ function BookingRequests() {
     }
   };
 
+  const openConflictModal = () => {
+    showModal(<CheckConflictBookingModal />);
+  };
+
   if (loading) return <p className="text-center mt-5">Loading bookings...</p>;
 
   return (
     <div className="p-6 bg-white shadow-md mt-6 mx-4">
-      <h2 className="text-2xl font-bold mb-6">View Booking Requests</h2>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold">View Booking Requests</h2>
+        <button
+          onClick={openConflictModal}
+          className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+        >
+          Check Conflict Booking
+        </button>
+      </div>
+
       {bookings.length === 0 ? (
         <p className="text-center text-gray-500">No bookings found.</p>
       ) : (

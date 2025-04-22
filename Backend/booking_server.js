@@ -24,6 +24,33 @@ const poolPromise = new sql.ConnectionPool({
   }
 }).connect();
 
+// Get All Auditoriums (excluding those marked as deleted)
+// Only fetch `id` and `name`
+app.get("/auditoriums", async (req, res) => {
+  try {
+    const id = req.query.id ? parseInt(req.query.id, 10) : null;
+    const pool = await poolPromise;
+
+    let query = "SELECT id, name FROM auditoriums WHERE is_deleted <> 1";
+    const request = pool.request();
+
+    if (id) {
+      query += " AND id = @id";
+      request.input("id", id);
+    }
+
+    const result = await request.query(query);
+
+    if (result.recordset.length === 0) {
+      return res.status(404).json({ message: id ? "Auditorium not found" : "No auditoriums found" });
+    }
+
+    res.status(200).json(id ? result.recordset[0] : result.recordset);
+  } catch (err) {
+    console.error("Error fetching auditoriums:", err);
+    res.status(500).json({ message: "Failed to retrieve auditoriums", error: err.message });
+  }
+});
 
 // GET: Fetch all feedback for an auditorium
 app.get("/api/feedback/:auditoriumId", async (req, res) => {
