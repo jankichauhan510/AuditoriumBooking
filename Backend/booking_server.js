@@ -254,9 +254,13 @@ app.get('/check-only-conflicts/:auditoriumId', async (req, res) => {
 
       // Checking conflicts for each pending booking
       for (const booking of pendingBookings) {
-          const { id, dates } = booking;
+          const { id, event_name, dates } = booking;
 
-          let hasConflict = false;
+          let conflictDetails = {
+              bookingId: id,
+              eventName: event_name,
+              comparisons: []  // Holds comparisons of requested slots vs approved slots
+          };
 
           // Loop through the dates and requested time slots
           for (const { date, time_slots } of dates) {
@@ -266,24 +270,33 @@ app.get('/check-only-conflicts/:auditoriumId', async (req, res) => {
               for (const slot of time_slots) {
                   for (const approvedSlot of approvedSlots) {
                       if (slotsOverlap(slot, approvedSlot)) {
-                          hasConflict = true;
-                          break;
+                          // Store comparison details along with approved booking details
+                          conflictDetails.comparisons.push({
+                              requestedSlot: slot,
+                              approvedSlot: approvedSlot,
+                              conflictDetected: true,
+                              date: date,
+                              approvedBooking: {  // Approved booking details causing conflict
+                                  date: date,
+                                  approvedSlot: approvedSlot,
+                                  approvedBookingId: bookedSlotsMap[date].find(b => b === approvedSlot).bookingId,  // Assuming bookingId exists on approved slot
+                                  approvedEventName: bookedSlotsMap[date].find(b => b === approvedSlot).eventName,  // Assuming eventName exists
+                                  bookedBy: bookedSlotsMap[date].find(b => b === approvedSlot).bookedBy  // Assuming bookedBy exists
+                              }
+                          });
                       }
                   }
-                  if (hasConflict) break;
               }
-
-              if (hasConflict) break;
           }
 
-          if (hasConflict) {
-              conflicts.push(booking);
+          // If any conflicts are found, add the conflict details to the conflicts array
+          if (conflictDetails.comparisons.length > 0) {
+              conflicts.push(conflictDetails);
           }
       }
 
       res.json({
           message: `✅ Conflict check completed.`,
-          totalPending: pendingBookings.length,
           totalConflicts: conflicts.length,
           conflicts
       });
