@@ -43,7 +43,7 @@ function BookingRequests() {
 
   const renderTableRows = (data, type = "booking") =>
     data.length === 0 ? (
-      <p className="text-center text-gray-500 mt-4">No data found.</p>
+      <p className="text-center text-gray-500 mt-4">No booking requests at the moment. Please check back later.</p>
     ) : (
       <div className="overflow-x-auto">
         <table className="w-full border-collapse border text-sm">
