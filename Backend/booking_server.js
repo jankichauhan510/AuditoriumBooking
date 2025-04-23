@@ -145,7 +145,7 @@ app.put("/api/feedback/update/:id", async (req, res) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
- 
+
 // ✅ Get all bookings using the stored procedure on admin side
 app.get('/get-all-bookings', async (req, res) => {
   try {
@@ -322,6 +322,71 @@ app.get('/check-only-conflicts/:auditoriumId', async (req, res) => {
   }
 });
 
+// Email notification function with event name
+async function sendNotificationEmail(userEmail, eventName) {
+  let transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+  });
+
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: userEmail,
+    subject: 'Booking Status Update - Waiting List',
+    text: `Your booking for the event "${eventName}" has been added to the waiting list. Please wait for further confirmation.`
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log('✅ Notification email sent successfully.');
+  } catch (error) {
+    console.error('❌ Error sending email:', error);
+  }
+}
+
+// Update booking conflict status and notify the user
+app.post('/update-booking-conflict-status', async (req, res) => {
+  const { bookingId, status } = req.body;
+
+  try {
+    const pool = await poolPromise;
+    const bookingIdInt = parseInt(bookingId, 10);
+
+    // Get booking info
+    const checkBooking = await pool.query(`SELECT * FROM bookings WHERE id = ${bookingIdInt}`);
+
+    if (!checkBooking || !checkBooking.recordset || checkBooking.recordset.length === 0) {
+      return res.status(404).send({ message: 'Booking not found' });
+    }
+
+    const booking = checkBooking.recordset[0];
+    const userId = booking.UserID;
+    const eventName = booking.event_name;
+
+    // Get user email
+    const userQuery = await pool.query(`SELECT email FROM UsersDetails WHERE id = ${userId}`);
+    const userEmail = userQuery.recordset[0].User_Email;
+
+    // Update booking status
+    const result = await pool.query(
+      `UPDATE bookings SET booking_status = '${status}' WHERE id = ${bookingIdInt}`
+    );
+
+    if (result.rowsAffected > 0) {
+      // Notify the user
+      await sendNotificationEmail(userEmail, eventName);
+      res.status(200).send({ message: 'Booking status updated to "waiting" and user notified' });
+    } else {
+      res.status(404).send({ message: 'Booking not found' });
+    }
+  } catch (error) {
+    console.error("❌ Error updating booking status:", error);
+    res.status(500).send({ message: 'Failed to update booking status' });
+  }
+});
 
 // Route for booking the auditorium
 app.post('/book-auditorium', async (req, res) => {
