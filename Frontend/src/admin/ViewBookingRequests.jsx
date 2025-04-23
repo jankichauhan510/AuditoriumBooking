@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { Clock, Hourglass } from "lucide-react"; // Icons from lucide-react
 import BookingRow from "../admin/BookingRow";
 import WaitingListRow from "../admin/WaitingListRow";
 import CheckConflictBookingModal from "../admin/CheckConflictBookings";
@@ -86,24 +87,28 @@ function BookingRequests() {
       </div>
 
       {/* Tabs */}
-      <div className="mb-6 flex gap-4">
-        <button
+      <div className="mb-6 w-fit rounded-full bg-gray-200 p-1 flex shadow-md">
+        {/* Booking Requests */}
+        <div
           onClick={() => setActiveTab("requests")}
-          className={`px-4 py-2 rounded ${
-            activeTab === "requests" ? "bg-blue-600 text-white" : "bg-gray-200"
-          }`}
+          className={`cursor-pointer flex items-center gap-2 px-5 py-2 rounded-full transition-all duration-300
+      ${activeTab === "requests" ? "bg-blue-600 text-white" : "text-gray-700 hover:bg-gray-300"}`}
         >
-          Booking Requests
-        </button>
-        <button
+          <Clock size={18} />
+          <span className="text-sm font-medium">Booking Requests</span>
+        </div>
+
+        {/* Waiting List */}
+        <div
           onClick={() => setActiveTab("waiting")}
-          className={`px-4 py-2 rounded ${
-            activeTab === "waiting" ? "bg-blue-600 text-white" : "bg-gray-200"
-          }`}
+          className={`cursor-pointer flex items-center gap-2 px-5 py-2 rounded-full transition-all duration-300
+      ${activeTab === "waiting" ? "bg-blue-600 text-white" : "text-gray-700 hover:bg-gray-300"}`}
         >
-          Waiting List
-        </button>
+          <Hourglass size={18} />
+          <span className="text-sm font-medium">Waiting List</span>
+        </div>
       </div>
+
 
       {/* Tables */}
       {activeTab === "requests" && renderTableRows(bookings, "booking")}
