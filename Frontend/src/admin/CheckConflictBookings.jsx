@@ -35,7 +35,7 @@ function CheckConflictBookings({ closeModal }) {
         <div className="p-6 w-full max-w-2xl relative max-h-[400px] overflow-y-auto">
             {/* Close Button */}
             <button
-                onClick={closeModal} // Close the modal when clicked
+                onClick={closeModal}
                 className="absolute top-2 right-2 text-2xl text-red-600"
             >
                 &times;
@@ -66,56 +66,57 @@ function CheckConflictBookings({ closeModal }) {
 
             <div className="mt-6 bg-gray-100 p-4 rounded-lg shadow-md">
                 {conflicts.length > 0 ? (
-                    <div>
-                        <h3 className="font-semibold text-xl mb-4 text-gray-800">Conflicting Bookings</h3>
-                        <ul className="space-y-4">
-                            {conflicts.map((conflict) => (
-                                <li
-                                    key={conflict.bookingId}
-                                    className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 hover:shadow-lg transition-shadow duration-300"
-                                    style={{ color: "red" }}
-                                >
-                                    <div className="font-bold text-lg text-red-600 mb-2">{conflict.eventName}</div>
-
-                                    {/* Loop through the conflicts and display the requested time slots */}
-                                    {conflict.comparisons.length > 0 ? (
-                                        <div>
-                                            <div className="text-sm">
-                                                <strong className="text-gray-700">Conflicting with:</strong>
-                                                <ul className="list-disc list-inside pl-5">
-                                                    {conflict.comparisons.map((comparison, index) => (
-                                                        <li key={index} className="mb-3">
-                                                            <div>
-                                                                <strong className="text-gray-600">Requested Slot:</strong> {comparison.requestedSlot}
-                                                            </div>
-                                                            <div>
-                                                                <strong className="text-gray-600">Approved Slot:</strong> {comparison.approvedSlot}
-                                                            </div>
-                                                            <div>
-                                                                <strong className="text-gray-600">Booking Details:</strong>
-                                                                <div className="pl-4">
-                                                                    <strong className="text-gray-500">Booked by:</strong> {comparison.approvedBooking.approvedUserName}
-                                                                    <br />
-                                                                    <strong className="text-gray-500">Date:</strong> {comparison.approvedBooking.date}
-                                                                </div>
-                                                            </div>
+                    <div className="p-4 rounded-lg shadow-md">
+                    {conflicts.length > 0 ? (
+                        <div>
+                            <h3 className="font-semibold text-xl mb-4 text-gray-800">Conflicting Bookings</h3>
+                            <ul className="space-y-6">
+                                {conflicts.map((conflict) => (
+                                    <li
+                                        key={conflict.bookingId}
+                                        className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 hover:shadow-lg transition-shadow duration-300"
+                                    >
+                                        <div className="text-red-600 font-bold text-lg mb-2">
+                                            🎤 Event: {conflict.eventName}
+                                        </div>
+                
+                                        {/* Group by Date */}
+                                        {Object.entries(
+                                            conflict.comparisons.reduce((acc, curr) => {
+                                                acc[curr.date] = acc[curr.date] || [];
+                                                acc[curr.date].push(curr);
+                                                return acc;
+                                            }, {})
+                                        ).map(([date, slots], idx) => (
+                                            <div key={idx} className="mb-4">
+                                                <div className="text-gray-800 font-semibold mb-2 border-b border-gray-300 pb-1">
+                                                    📅 Date: {date}
+                                                </div>
+                                                <ul className="list-disc list-inside pl-4 space-y-2 text-sm text-gray-700">
+                                                    {slots.map((slot, i) => (
+                                                        <li key={i}>
+                                                            <div><strong>⏰ Requested:</strong> {slot.requestedSlot}</div>
+                                                            <div><strong>✅ Approved:</strong> {slot.approvedSlot}</div>
+                                                            <div><strong>🎤 Event Name:</strong> {slot.approvedBooking.approvedEventName}</div>
+                                                            <div><strong>👤 Booked By:</strong> {slot.approvedBooking.bookedBy}</div>
                                                         </li>
                                                     ))}
                                                 </ul>
                                             </div>
-                                        </div>
-                                    ) : (
-                                        <p className="text-gray-600">No conflict with approved bookings.</p>
-                                    )}
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
+                                        ))}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    ) : (
+                        <p className="mt-4 text-green-600 font-medium">✅ No conflicts found.</p>
+                    )}
+                </div>
+                
                 ) : (
                     <p className="mt-4 text-green-600 font-medium">✅ No conflicts found.</p>
                 )}
             </div>
-
         </div>
     );
 }
