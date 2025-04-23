@@ -388,6 +388,39 @@ app.post('/update-booking-conflict-status', async (req, res) => {
   }
 });
 
+// GET Waiting List Bookings
+app.get("/get-waiting-list", async (req, res) => {
+  try {
+    const pool = await poolPromise;
+
+    const result = await pool
+      .request()
+      .query(`SELECT
+          u.name AS user_name,
+          u.email AS user_email,
+          a.name AS auditorium_name,
+          b.created_at,
+          b.event_name,
+          b.dates
+      FROM bookings b
+      JOIN UsersDetails u ON b.UserID = u.id
+      JOIN auditoriums a ON b.AuditoriumID = a.id
+      WHERE b.booking_status = 'Waiting'
+      ORDER BY b.id DESC;
+    `);
+
+    const bookings = result.recordset.map(booking => ({
+      ...booking,
+      dates: JSON.parse(booking.dates) // parse stringified JSON to JS object
+    }));
+
+    res.status(200).json(bookings); // 🔁 Send the parsed version
+  } catch (error) {
+    console.error("❌ Error fetching waiting list:", error);
+    res.status(500).json({ error: "Failed to fetch waiting list bookings" });
+  }
+});
+
 // Route for booking the auditorium
 app.post('/book-auditorium', async (req, res) => {
   try {
