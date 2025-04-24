@@ -1,10 +1,11 @@
 import sql from 'mssql';
+import dotenv from "dotenv";
 import express from 'express';
 import cors from 'cors';
 import nodemailer from "nodemailer";
 import axios from 'axios';
 import moment from 'moment';
-
+//const nodemailer = require('nodemailer');
 const router = express.Router();
 const app = express();
 
@@ -324,26 +325,25 @@ app.get('/check-only-conflicts/:auditoriumId', async (req, res) => {
 
 // Email notification function with event name
 async function sendNotificationEmail(userEmail, eventName) {
-  let transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-  });
-
-  const mailOptions = {
-    from: process.env.EMAIL_USER,
-    to: userEmail,
-    subject: 'Booking Status Update - Waiting List',
-    text: `Your booking for the event "${eventName}" has been added to the waiting list. Please wait for further confirmation.`
-  };
-
   try {
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
+
+    const mailOptions = {
+      from: `"Auditorium Booking" <${process.env.EMAIL_USER}>`,
+      to: userEmail,
+      subject: "Booking Status Update - Waiting List",
+      text: `Dear User,\n\nYour booking for the event "${eventName}" has been added to the waiting list. You will be notified upon confirmation.\n\nThank you!`,
+    };
+
     await transporter.sendMail(mailOptions);
-    console.log('✅ Notification email sent successfully.');
   } catch (error) {
-    console.error('❌ Error sending email:', error);
+    console.error("❌ Failed to send notification email:", error.message);
   }
 }
 
@@ -357,8 +357,7 @@ app.post('/update-booking-conflict-status', async (req, res) => {
 
     // Get booking info
     const checkBooking = await pool.query(`SELECT * FROM bookings WHERE id = ${bookingIdInt}`);
-
-    if (!checkBooking || !checkBooking.recordset || checkBooking.recordset.length === 0) {
+    if (!checkBooking.recordset || checkBooking.recordset.length === 0) {
       return res.status(404).send({ message: 'Booking not found' });
     }
 
@@ -368,22 +367,25 @@ app.post('/update-booking-conflict-status', async (req, res) => {
 
     // Get user email
     const userQuery = await pool.query(`SELECT email FROM UsersDetails WHERE id = ${userId}`);
-    const userEmail = userQuery.recordset[0].User_Email;
+    if (!userQuery.recordset || userQuery.recordset.length === 0) {
+      return res.status(404).send({ message: 'User not found for this booking' });
+    }
+
+    const userEmail = userQuery.recordset[0].email;
 
     // Update booking status
     const result = await pool.query(
       `UPDATE bookings SET booking_status = '${status}' WHERE id = ${bookingIdInt}`
     );
 
-    if (result.rowsAffected > 0) {
-      // Notify the user
+    if (result.rowsAffected[0] > 0) {
       await sendNotificationEmail(userEmail, eventName);
-      res.status(200).send({ message: 'Booking status updated to "waiting" and user notified' });
+      res.status(200).send({ message: 'Booking status updated and user notified' });
     } else {
-      res.status(404).send({ message: 'Booking not found' });
+      res.status(404).send({ message: 'Booking update failed: Not found or unchanged' });
     }
   } catch (error) {
-    console.error("❌ Error updating booking status:", error);
+    console.error("❌ Error in /update-booking-conflict-status:", error.message);
     res.status(500).send({ message: 'Failed to update booking status' });
   }
 });
